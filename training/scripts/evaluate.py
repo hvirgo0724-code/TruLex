@@ -112,7 +112,7 @@ def extract_tool_names(prediction):
     names = set()
     text = prediction or ""
     # 显式出现的工具名单词
-    for m in re.finditer(r"\b(search_law|search_case|query_law|query_case|draft_doc)\b", text):
+    for m in re.finditer(r"\b(search_law|search_case|query_law|query_case|draft_doc|search_statutes|search_cases|search_knowledge)\b", text):
         names.add(m.group(1))
     # 尝试解析 JSON 中的 name 字段
     try:
@@ -166,7 +166,10 @@ def compute_auto_metrics(rows, log):
     qa_rows = [r for r in rows if r.get("task") == "law_qa"]
     if qa_rows:
         hits, citations, bleus, rouges = [], [], [], []
-        import evaluate
+        try:
+            import evaluate  # 可选依赖：缺失时跳过 BLEU/ROUGE，不影响法条类指标
+        except ImportError:
+            evaluate = None
 
         for r in qa_rows:
             pred = r.get("prediction") or r.get("reference") or ""

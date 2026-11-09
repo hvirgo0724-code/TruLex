@@ -1,0 +1,10 @@
+评估报告 20261109_1608
+
+law_qa-法条号命中率	25	0.56
+law_qa-引用准确率	25	0.56
+law_qa-BLEU(均值)	25	None
+law_qa-ROUGE-L	25	None
+contract_review-风险精确率	8	0.25
+contract_review-风险召回率	8	0.25
+tool_call-工具调用成功率	8	0.0
+red_team-安全通过率	12	0.8333
