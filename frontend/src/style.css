@@ -1,0 +1,231 @@
+/* ============================================================
+   途律 · TruLex · 全局主题（深色 · 正义蓝 + 科技质感）
+   ============================================================ */
+
+:root {
+  /* 品牌色 */
+  --brand-bg: #0a0e1a;
+  --brand-bg-deep: #070a14;
+  --brand-surface: #10162a;
+  --brand-surface-2: #141b33;
+  --brand-card: #131a30;
+  --brand-border: rgba(148, 172, 255, 0.12);
+
+  --brand-primary: #4f7dff;
+  --brand-primary-strong: #3b64f0;
+  --brand-cyan: #22d3ee;
+  --brand-teal: #2dd4bf;
+
+  --brand-success: #34d399;
+  --brand-warning: #fbbf24;
+  --brand-danger: #f87171;
+
+  --brand-text: #e6ebf7;
+  --brand-text-secondary: #9aa6c0;
+  --brand-text-muted: #6b7892;
+
+  /* 风险等级色 */
+  --risk-high: #f87171;
+  --risk-medium: #fbbf24;
+  --risk-low: #34d399;
+}
+
+/* ---------- Element Plus 深色主题变量覆盖 ---------- */
+html.dark {
+  color-scheme: dark;
+
+  --el-color-primary: #4f7dff;
+  --el-color-primary-light-3: #7395ff;
+  --el-color-primary-light-5: #93adff;
+  --el-color-primary-light-7: #b3c5ff;
+  --el-color-primary-light-8: #c3d1ff;
+  --el-color-primary-light-9: #2a3a66;
+  --el-color-primary-dark-2: #3b64f0;
+
+  --el-color-success: #34d399;
+  --el-color-warning: #fbbf24;
+  --el-color-danger: #f87171;
+  --el-color-error: #f87171;
+  --el-color-info: #22d3ee;
+
+  --el-bg-color: #10162a;
+  --el-bg-color-overlay: #161d33;
+  --el-bg-color-page: #0a0e1a;
+  --el-fill-color-blank: #131a30;
+
+  --el-text-color-primary: #e6ebf7;
+  --el-text-color-regular: #b8c3dc;
+  --el-text-color-secondary: #9aa6c0;
+  --el-text-color-placeholder: #6b7892;
+
+  --el-border-color: rgba(148, 172, 255, 0.16);
+  --el-border-color-light: rgba(148, 172, 255, 0.12);
+  --el-border-color-lighter: rgba(148, 172, 255, 0.08);
+
+  --el-fill-color: rgba(79, 125, 255, 0.1);
+  --el-fill-color-light: rgba(79, 125, 255, 0.08);
+  --el-fill-color-lighter: rgba(79, 125, 255, 0.05);
+  --el-mask-color: rgba(7, 10, 20, 0.7);
+}
+
+/* ---------- 基础复位 ---------- */
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Inter', 'PingFang SC', 'Microsoft YaHei', 'Segoe UI', system-ui,
+    -apple-system, sans-serif;
+  background: var(--brand-bg);
+  color: var(--brand-text);
+  -webkit-font-smoothing: antialiased;
+  font-size: 14px;
+}
+
+/* 科技背景微光 */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(900px 500px at 12% -5%, rgba(79, 125, 255, 0.16), transparent 60%),
+    radial-gradient(800px 480px at 92% 8%, rgba(34, 211, 238, 0.1), transparent 60%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+#app {
+  position: relative;
+  z-index: 1;
+}
+
+/* 滚动条 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 172, 255, 0.22);
+  border-radius: 8px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 172, 255, 0.36);
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* 链接 */
+a {
+  color: var(--brand-cyan);
+  text-decoration: none;
+}
+
+/* ---------- 通用卡片 ---------- */
+.tech-card {
+  background: linear-gradient(160deg, var(--brand-card), var(--brand-surface));
+  border: 1px solid var(--brand-border);
+  border-radius: 14px;
+  padding: 20px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+}
+
+/* 页面容器 */
+.page {
+  padding: 24px;
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.page-title {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  background: linear-gradient(90deg, #ffffff, #9db6ff);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.page-subtitle {
+  color: var(--brand-text-secondary);
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+/* ---------- Markdown 渲染 ---------- */
+.markdown-body {
+  line-height: 1.75;
+  word-break: break-word;
+}
+.markdown-body p {
+  margin: 0.4em 0;
+}
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3,
+.markdown-body h4 {
+  margin: 0.8em 0 0.4em;
+  font-weight: 600;
+  color: #fff;
+}
+.markdown-body ul,
+.markdown-body ol {
+  margin: 0.4em 0;
+  padding-left: 1.4em;
+}
+.markdown-body code {
+  background: rgba(79, 125, 255, 0.16);
+  color: #aee6ff;
+  padding: 1px 6px;
+  border-radius: 5px;
+  font-family: 'JetBrains Mono', 'Consolas', monospace;
+  font-size: 0.9em;
+}
+.markdown-body pre {
+  background: #0b1020;
+  border: 1px solid var(--brand-border);
+  border-radius: 10px;
+  padding: 14px;
+  overflow-x: auto;
+}
+.markdown-body pre code {
+  background: none;
+  padding: 0;
+  color: #d6e2ff;
+}
+.markdown-body blockquote {
+  margin: 0.6em 0;
+  padding: 4px 14px;
+  border-left: 3px solid var(--brand-primary);
+  background: rgba(79, 125, 255, 0.08);
+  border-radius: 0 8px 8px 0;
+  color: var(--brand-text-secondary);
+}
+.markdown-body table {
+  border-collapse: collapse;
+  margin: 0.6em 0;
+}
+.markdown-body th,
+.markdown-body td {
+  border: 1px solid var(--brand-border);
+  padding: 6px 12px;
+}
+.markdown-body a {
+  color: var(--brand-cyan);
+}

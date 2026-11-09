@@ -1,0 +1,117 @@
+# ===========================================================================
+# 法律智慧大脑 —— 训练统一配置
+# 所有 train/prepare/evaluate 脚本读取此文件；
+# 命令行参数（--base_model / --epochs / --batch_size / --lr / --max_seq_len）
+# 与环境变量（BASE_MODEL / OUTPUT_ROOT）可覆盖其中关键项。
+# ===========================================================================
+
+# 基座模型（环境变量 BASE_MODEL 优先）。默认 Unsloth 官方量化加速版
+# Qwen2.5-7B-Instruct；也可换成 "Qwen/Qwen2.5-7B-Instruct" 或
+# "unsloth/Qwen3-8B" 等。
+base_model: "unsloth/Qwen2.5-7B-Instruct"
+
+# 序列最大长度
+max_seq_len: 2048
+
+# 是否 4bit 量化加载省显存；dtype 为 null 时自动选择
+load_in_4bit: true
+dtype: null            # null / float16 / bfloat16
+
+# 训练精度（A100/H100 建议 bf16）
+bf16: true
+
+# 随机种子
+seed: 3407
+
+# LoRA 配置（Unsloth 推荐目标模块：全注意力 + MLP 门控）
+lora:
+  r: 16
+  lora_alpha: 16
+  lora_dropout: 0.0
+  bias: "none"
+  use_rslora: false
+  target_modules:
+    - q_proj
+    - k_proj
+    - v_proj
+    - o_proj
+    - gate_proj
+    - up_proj
+    - down_proj
+
+# 产物根目录（环境变量 OUTPUT_ROOT 优先；容器内挂载为 /models）
+output:
+  root: "/models"
+
+# 数据路径（相对路径基于 training/ 目录解析）
+data:
+  raw_dir: "data/raw"                              # PT 原始语料目录（txt/md）
+  pretrain_file: "data/processed/pretrain.jsonl"   # PT 清洗后语料
+  sft_file: "data/processed/sft.jsonl"             # SFT 指令数据
+  dpo_file: "data/processed/dpo.jsonl"             # DPO 偏好对数据
+  eval_file: "data/eval/eval.jsonl"                # 评估黄金集
+
+# ===========================================================================
+# 阶段一：继续预训练 PT（自回归语言建模）
+# ===========================================================================
+pt:
+  train_data: "data/processed/pretrain.jsonl"
+  epochs: 1
+  batch_size: 2
+  grad_accum: 4
+  lr: 2.0e-5
+  warmup_ratio: 0.03
+  weight_decay: 0.01
+  logging_steps: 10
+  save_steps: 200
+  max_seq_len: 2048
+
+# ===========================================================================
+# 阶段二：监督微调 SFT（6 类法律能力 + 工具调用）
+# ===========================================================================
+sft:
+  train_data: "data/processed/sft.jsonl"
+  epochs: 3
+  batch_size: 2
+  grad_accum: 4
+  lr: 2.0e-4
+  warmup_ratio: 0.03
+  weight_decay: 0.01
+  logging_steps: 5
+  save_steps: 100
+  max_seq_len: 2048
+
+# ===========================================================================
+# 阶段三：偏好对齐 DPO（三元组 prompt/chosen/rejected）
+# ===========================================================================
+dpo:
+  train_data: "data/processed/dpo.jsonl"
+  epochs: 1
+  batch_size: 1
+  grad_accum: 8
+  lr: 5.0e-5
+  warmup_ratio: 0.05
+  beta: 0.1                # DPO 温度/正则强度
+  max_prompt_length: 1024
+  max_length: 2048
+  logging_steps: 5
+  save_steps: 100
+
+# ===========================================================================
+# 评估（自动指标 + LLM Judge + 红队测试）
+# ===========================================================================
+eval:
+  eval_file: "data/eval/eval.jsonl"
+  judge: false             # 是否调用 LLM 做 Judge 打分（依赖 BASE_URL/API_KEY）
+  report_dir: "reports"
+
+# ===========================================================================
+# vLLM 部署默认参数
+# ===========================================================================
+deploy:
+  port: 8000
+  quantization: null       # null / gptq / awq
+  gpu_memory_utilization: 0.9
+  tensor_parallel_size: 1
+  max_model_len: 8192
+  served_model_name: "trullex"

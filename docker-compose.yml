@@ -1,0 +1,217 @@
+# 途律 · TruLex —— 全栈 Docker 编排
+# 使用：cp .env.example .env 后 `docker compose up -d`
+# 训练节点（GPU）按需启动：`docker compose --profile training up -d training`
+name: trullex
+
+services:
+  # ---------- 关系数据库：MySQL 8 ----------
+  mysql:
+    image: mysql:8.0
+    container_name: trullex-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root123456
+      MYSQL_DATABASE: legal
+      MYSQL_USER: legal
+      MYSQL_PASSWORD: legal
+    command: --default-authentication-plugin=mysql_native_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot123456"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # ---------- 智能体记忆库：PostgreSQL 16 ----------
+  postgres:
+    image: postgres:16-alpine
+    container_name: trullex-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: legal_memory
+      POSTGRES_USER: legal
+      POSTGRES_PASSWORD: legal
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U legal -d legal_memory"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # ---------- 缓存/会话/限流：Redis ----------
+  redis:
+    image: redis:7-alpine
+    container_name: trullex-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # ---------- 向量库：Milvus（standalone 依赖 etcd + minio）----------
+  etcd:
+    image: quay.io/coreos/etcd:v3.5.25
+    container_name: trullex-etcd
+    restart: unless-stopped
+    environment:
+      - ETCD_AUTO_COMPACTION_MODE=revision
+      - ETCD_AUTO_COMPACTION_RETENTION=1000
+      - ETCD_QUOTA_BACKEND_BYTES=4294967296
+      - ETCD_SNAPSHOT_COUNT=50000
+    command: etcd -advertise-client-urls=http://etcd:2379 -listen-client-urls http://0.0.0.0:2379 --data-dir /etcd
+    volumes:
+      - etcd_data:/etcd
+    healthcheck:
+      test: ["CMD", "etcdctl", "endpoint", "health"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+
+  minio:
+    image: milvusdb/minio:RELEASE.2024-12-18T13-15-44Z
+    container_name: trullex-minio
+    restart: unless-stopped
+    environment:
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    command: minio server /minio_data --console-address ":9001"
+    volumes:
+      - minio_data:/minio_data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+
+  milvus:
+    image: milvusdb/milvus:v3.0.2
+    container_name: trullex-milvus
+    restart: unless-stopped
+    command: ["milvus", "run", "standalone"]
+    security_opt:
+      - seccomp:unconfined
+    environment:
+      MINIO_REGION: us-east-1
+      ETCD_ENDPOINTS: etcd:2379
+      MINIO_ADDRESS: minio:9000
+    ports:
+      - "19530:19530"
+      - "9091:9091"
+    volumes:
+      - milvus_data:/var/lib/milvus
+    depends_on:
+      etcd:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9091/healthz"]
+      interval: 30s
+      start_period: 90s
+      timeout: 20s
+      retries: 3
+
+  # ---------- 图数据库：Neo4j ----------
+  neo4j:
+    image: neo4j:5-community
+    container_name: trullex-neo4j
+    restart: unless-stopped
+    environment:
+      NEO4J_AUTH: neo4j/legal123456
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    volumes:
+      - neo4j_data:/data
+
+  # ---------- 链路追踪：Jaeger ----------
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: trullex-jaeger
+    restart: unless-stopped
+    ports:
+      - "16686:16686"
+      - "4317:4317"
+      - "4318:4318"
+
+  # ---------- 后端：FastAPI ----------
+  backend:
+    build: ./backend
+    container_name: trullex-backend
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "8000:8000"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      milvus:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+
+  # ---------- 前端：Vue3 + Vite ----------
+  frontend:
+    build: ./frontend
+    container_name: trullex-frontend
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+
+  # ---------- 训练节点（可选，GPU）----------
+  training:
+    build: ./training
+    container_name: trullex-training
+    profiles: ["training"]
+    env_file: .env
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+    volumes:
+      - ./training:/workspace
+      - model_repo:/models
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+volumes:
+  mysql_data:
+    name: legal-agent_mysql_data
+  postgres_data:
+    name: legal-agent_postgres_data
+  redis_data:
+    name: legal-agent_redis_data
+  etcd_data:
+    name: legal-agent_etcd_data
+  minio_data:
+    name: legal-agent_minio_data
+  milvus_data:
+    name: legal-agent_milvus_data
+  neo4j_data:
+    name: legal-agent_neo4j_data
+  model_repo:
+    name: legal-agent_model_repo
